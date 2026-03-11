@@ -1,5 +1,5 @@
 # backend/app/database.py
-# Simple DB for saving match history (great for demo/portfolio)
+# Simple DB for saving match history and other info in the future. Using SQLAlchemy with PostgreSQL.
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
