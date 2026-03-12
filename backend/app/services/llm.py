@@ -47,17 +47,23 @@ async def analyze_resume(resume_text: str, job_description: str):
 
 # function to rewrite a single bullet point, can be used in the future for a resume optimization feature. Currently not integrated into the main flow, but can be called separately if needed.
 async def rewrite_bullet(bullet: str, job_description: str):
+    """
+    Handles different JSON formats the LLM might return.
+    """
     cache_key = hashlib.md5(f"rewrite:{bullet}:{job_description}".encode()).hexdigest()
     cached = await redis_client.get(cache_key)
     if cached:
         return json.loads(cached)
 
-    # prompt should be concise to fit within token limits, but informative enough for the model to generate relevant rewrites
+    # prompt to rewrite a bullet point should be clear and specific
     prompt = f"""
     You are an expert resume writer.
     Original bullet: {bullet}
     Target job: {job_description}
-    Return ONLY a JSON array with exactly 3 improved bullet points.
+
+    Return ONLY a valid JSON object in this exact format:
+    {{"rewrites": ["improved bullet 1", "improved bullet 2", "improved bullet 3"]}}
+    Do not add any extra text, explanations, or markdown.
     """
 
     response = await client.chat.completions.create(
@@ -67,6 +73,25 @@ async def rewrite_bullet(bullet: str, job_description: str):
         response_format={"type": "json_object"}
     )
 
-    rewrites = json.loads(response.choices[0].message.content)["rewrites"]
+    content = response.choices[0].message.content
+    parsed = json.loads(content)
+
+    # Robust parsing - handles multiple possible LLM responses
+    if isinstance(parsed, list):
+        rewrites = parsed
+    elif isinstance(parsed, dict):
+        if "rewrites" in parsed:
+            rewrites = parsed["rewrites"]
+        elif "improved_bullets" in parsed:
+            rewrites = parsed["improved_bullets"]
+        else:
+            rewrites = list(parsed.values())[0] if parsed.values() else []
+    else:
+        rewrites = [str(parsed)]
+
+    # Make sure we always return exactly 3 items
+    while len(rewrites) < 3:
+        rewrites.append("• Improved version (AI fallback)")
+
     await redis_client.setex(cache_key, 86400, json.dumps(rewrites))
     return rewrites

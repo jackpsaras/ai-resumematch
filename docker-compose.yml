@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: resumematch
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -18,6 +18,16 @@ services:
     restart: always
     ports:
       - "6379:6379"
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - OPENAI_API_KEY=$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
 
 volumes:
   pgdata:
