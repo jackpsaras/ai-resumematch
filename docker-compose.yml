@@ -27,7 +27,7 @@ services:
       - db
       - redis
     environment:
-      - OPENAI_API_KEY=$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
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
 
 volumes:
   pgdata:
